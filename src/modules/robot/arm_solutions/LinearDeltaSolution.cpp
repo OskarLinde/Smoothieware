@@ -134,8 +134,9 @@ bool LinearDeltaSolution::get_optional(arm_options_t& options) {
     options['R']= this->arm_radius;
 
     // don't report these if none of them are set
-    if(this->tower1_offset != 0.0F || this->tower2_offset != 0.0F || this->tower3_offset != 0.0F ||
-       this->tower1_angle != 0.0F  || this->tower2_angle != 0.0F  || this->tower3_angle != 0.0F) {
+//    if(this->tower1_offset != 0.0F || this->tower2_offset != 0.0F || this->tower3_offset != 0.0F ||
+//       this->tower1_angle != 0.0F  || this->tower2_angle != 0.0F  || this->tower3_angle != 0.0F)
+    {
 
         options['A'] = this->tower1_offset;
         options['B'] = this->tower2_offset;
