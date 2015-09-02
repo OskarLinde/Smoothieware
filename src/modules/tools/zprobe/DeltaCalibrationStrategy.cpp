@@ -95,13 +95,11 @@ bool DeltaCalibrationStrategy::probe_delta_points(Gcode *gcode)
 
     for(auto& i : pp) {
         int s;
-        if(!zprobe->doProbeAt(s, i[0], i[1])) return false;
+        float actuator[3];
+        if(!zprobe->doProbeAt(s, i[0], i[1], actuator)) return false;
         float z = zprobe->zsteps_to_mm(s);
         gcode->stream->printf("X:%1.4f Y:%1.4f Z:%1.4f (%d) A:%1.4f B:%1.4f C:%1.4f\n",
-            i[0], i[1], z, s,
-            THEKERNEL->robot->actuators[0]->get_current_position()+z,
-            THEKERNEL->robot->actuators[1]->get_current_position()+z,
-            THEKERNEL->robot->actuators[2]->get_current_position()+z);
+            i[0], i[1], z, s, actuator[0], actuator[1], actuator[2]);
     }
 
     return true;
