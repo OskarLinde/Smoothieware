@@ -336,6 +336,33 @@ void Robot::on_gcode_received(void *argument)
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS);   break;
             case 20: this->inch_mode = true;   break;
             case 21: this->inch_mode = false;   break;
+            case 53: {
+                // this is a bit of a hack, we transform the G53 into a G0 move
+                // but cancel the offsets that would have been applied
+                // repeated string concatenation isn't very efficient, but G53 is probably
+                // not used very often
+                bool old_absolute_mode = this->absolute_mode;
+                this->absolute_mode = false;
+                std::string new_move = "G0";
+                for (char letter = 'X'; letter <= 'Z'; letter++) {
+                    if ( gcode->has_letter(letter) ) {
+                        // calculate the offset we would have applied if this was a regular absolute move
+                        float offset = coordinate_system_offset[letter-'X'];
+                        if (selected_coordinate_system >= 0)
+                            offset += coordinate_systems[selected_coordinate_system][letter-'X'];
+                        new_move = new_move + ' ' + letter;
+
+                        // and adjust coordinates to cancel that offset
+                        char buf[16];
+                        sprintf(buf,"%.7f", gcode->get_value(letter) - from_millimeters(offset));
+                        new_move += std::string(buf);
+                    }
+                }
+                Gcode new_gcode(new_move, &(StreamOutput::NullStream));
+                on_gcode_received(&new_gcode);
+                this->absolute_mode = old_absolute_mode;
+                return;
+            }
             case 54:
             case 55:
             case 56:
