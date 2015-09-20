@@ -88,6 +88,12 @@ class Robot : public Module {
 
         float toolOffset[3];
 
+        // G92 offset
+        float coordinate_system_offset[3]{};
+
+        void workspace_to_absolute(const float workspace[3], float absolute[3]);
+        void absolute_to_workspace(const float absolute[3], float workspace[3]);
+
         // Used by Stepper, Planner
         friend class Planner;
         friend class Stepper;
