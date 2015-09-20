@@ -91,6 +91,12 @@ class Robot : public Module {
         // G92 offset
         float coordinate_system_offset[3]{};
 
+        static constexpr int number_of_coordinate_systems = 6;
+        // coordinate system 0 is the G92 temporary coordinate frame
+        // 1..6 coorespond to G54..G
+        int selected_coordinate_system = 0; // default coordinate system
+        float coordinate_systems[number_of_coordinate_systems][3]{};
+
         void workspace_to_absolute(const float workspace[3], float absolute[3]);
         void absolute_to_workspace(const float absolute[3], float workspace[3]);
 

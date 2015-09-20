@@ -279,6 +279,7 @@ void Robot::workspace_to_absolute(const float workspace[3], float absolute[3])
     // all offsets are simply additive, so the order of application doesn't matter
     for (int i = 0; i < 3; i++)
         absolute[i] = workspace[i]
+                + (selected_coordinate_system >= 0 ? coordinate_systems[selected_coordinate_system][i] : 0)
                 + coordinate_system_offset[i];
 }
 
@@ -287,6 +288,7 @@ void Robot::absolute_to_workspace(const float absolute[3], float workspace[3])
     // all offsets are simply additive, so the order of application doesn't matter
     for (int i = 0; i < 3; i++)
         workspace[i] = absolute[i]
+                - (selected_coordinate_system >= 0 ? coordinate_systems[selected_coordinate_system][i] : 0)
                 - coordinate_system_offset[i];
 }
 
@@ -334,6 +336,26 @@ void Robot::on_gcode_received(void *argument)
             case 19: this->select_plane(Y_AXIS, Z_AXIS, X_AXIS);   break;
             case 20: this->inch_mode = true;   break;
             case 21: this->inch_mode = false;   break;
+            case 54:
+            case 55:
+            case 56:
+            case 57:
+            case 58:
+            case 59: {
+                int index = gcode->g - 54;
+                // calling without arguments switches currently active coordinate system
+                if (gcode->get_num_args() == 0) {
+                    this->selected_coordinate_system = index;
+                    break;
+                }
+                // calling with arguments instead changes the given coordinate system
+                for (char letter = 'X'; letter <= 'Z'; letter++) {
+                    if ( gcode->has_letter(letter) ) {
+                        coordinate_systems[index][letter-'X'] = this->to_millimeters(gcode->get_value(letter));
+                    }
+                }
+                break;
+            }
             case 90: this->absolute_mode = true;   break;
             case 91: this->absolute_mode = false;   break;
             case 92: {
@@ -502,6 +524,30 @@ void Robot::on_gcode_received(void *argument)
                 gcode->stream->printf(";Max feedrates in mm/sec, XYZ cartesian, ABC actuator:\nM203 X%1.5f Y%1.5f Z%1.5f A%1.5f B%1.5f C%1.5f\n",
                                       this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS],
                                       alpha_stepper_motor->get_max_rate(), beta_stepper_motor->get_max_rate(), gamma_stepper_motor->get_max_rate());
+
+                bool has_coordinate_system = false;
+                for (auto c : coordinate_systems) {
+                    for (int i = 0; i < 3; i++) {
+                        if (c[i] != 0) {
+                            has_coordinate_system = true;
+                            break;
+                        }
+                    }
+                }
+                // M503 prints everything, M500 suppresses zero configurations
+                if (has_coordinate_system || gcode->m == 503) {
+                    gcode->stream->printf(";Coordinate systems\n");
+                    for (int i = 0; i < number_of_coordinate_systems; i++) {
+                        bool zero = true;
+                        for (auto v : coordinate_systems[i]) { if (v != 0) zero=false; break; }
+                        if (!zero || gcode->m == 503) {
+                            gcode->stream->printf("G%d X%.5f Y%.5f Z%.5f\n", 54+i,
+                                                  coordinate_systems[i][0],
+                                                  coordinate_systems[i][1],
+                                                  coordinate_systems[i][2]);
+                        }
+                    }
+                }
 
                 // NOTE: G92 offset is not stored!
                 if (gcode->m == 503) {
